@@ -41,3 +41,12 @@ Android Controller
         |
         v
       Vehicle
+
+```
+
+## Article
+
+For the engineering story behind this project—including the architecture,
+BLE protocol analysis, HCI validation, and design decisions—see:
+
+**[When My EV Charger App Disappeared, I Built a Local Android Controller](https://medium.com/@ajitraut04/when-my-ev-charger-app-disappeared-i-built-a-local-android-controller-58a1bb94de37)**
