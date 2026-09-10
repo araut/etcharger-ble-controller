@@ -44,6 +44,58 @@ Android Controller
 
 ```
 
+## Validation
+
+The behaviors below have been exercised against physical hardware I own,
+not just inferred from static analysis of the original application.
+
+| Operation | Protocol commands | Status |
+|---|---|---|
+| BLE scan / connect / GATT discovery | — | ✅ Validated |
+| Handshake | `0x01` request → `0x02` reply | ✅ Validated |
+| Current Status read | `0x09` request → `0x0A` reply | ✅ Validated |
+| EVSE Info read | `0x07` request → `0x08` reply | ✅ Validated |
+| Start Charging | `0x03` (`action=0x01`) → `0x04` reply | ✅ Validated |
+| Pause Charging | `0x03` (`action=0x02`) → `0x04` reply | ✅ Validated |
+
+### Validation scope
+
+Validation means the operation was independently reproduced using this
+controller against physical hardware and produced the expected device behavior
+or protocol response.
+
+It does **not** imply that every field in the corresponding response structure
+has been fully interpreted.
+
+### Test environment
+
+- Hardware: ETCharger-compatible EVSE
+- Firmware: documented where observable
+- Android: tested on a physical Android device
+- Transport: Bluetooth Low Energy
+- Vehicle charging behavior: Start and Pause verified end-to-end
+
+Private device identifiers, account data, and raw Bluetooth captures are
+intentionally excluded from the public repository.
+
+### Current limitations
+
+The following areas are not yet considered fully validated:
+
+- response fields whose semantics or units are still uncertain
+- cumulative energy and usage counters
+- behavior across other firmware or hardware variants
+- recovery from BLE disconnects during command execution
+- malformed or truncated protocol frames
+- permission revocation during an active session
+- charging-current configuration
+- additional protocol commands recovered from the original application
+
+Validation applies only to the specific operations and fields listed above,
+not to the complete ETCharger protocol surface.
+
+
+
 ## Article
 
 For the engineering story behind this project—including the architecture,
