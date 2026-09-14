@@ -1,5 +1,6 @@
 *.iml
 .gradle
+.gitignore
 /local.properties
 .idea/
 /.idea/caches
@@ -19,3 +20,4 @@ local.properties
 app/src/androidTest/
 app/src/test/
 app/src/main/keepRules/
+evse.local.properties

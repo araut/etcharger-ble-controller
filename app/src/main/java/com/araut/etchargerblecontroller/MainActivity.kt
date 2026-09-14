@@ -21,21 +21,27 @@ import androidx.appcompat.app.AppCompatActivity
 /**
  * UI for the independent ETCharger-compatible BLE controller.
  *
- * Privacy / publication design:
+ * Configuration sources:
  *
- * - No EVSE serial number is hardcoded.
- * - No authorized user ID is hardcoded.
+ * 1. Local DEBUG configuration from evse.local.properties
+ * 2. Manual runtime configuration entered through the UI
+ *
+ * Privacy:
+ *
+ * - No EVSE serial number is logged.
+ * - No authorized user ID is logged.
  * - No Bluetooth MAC address is displayed or logged.
- * - No BLE advertised device name is displayed because it may itself
- *   contain a persistent device identifier.
- * - EVSE configuration exists only in memory for the current process.
- * - Configuration values are never written to the application log.
+ * - No advertised device name is displayed.
+ * - Raw BLE protocol frames are not displayed.
  *
- * Intended only for EVSE hardware the user owns or is authorized to control.
+ * Intended only for EVSE hardware the user owns or is
+ * authorized to control.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity :
+    AppCompatActivity() {
 
-    private var bleController: BleController? =
+    private var bleController:
+            BleController? =
         null
 
     private lateinit var serialInput:
@@ -68,7 +74,8 @@ class MainActivity : AppCompatActivity() {
 
     private val permissionLauncher =
         registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
+            ActivityResultContracts
+                .RequestMultiplePermissions()
         ) { permissions ->
 
             val denied =
@@ -78,11 +85,16 @@ class MainActivity : AppCompatActivity() {
                     }
                     .keys
 
-            if (denied.isEmpty()) {
+            if (
+                denied.isEmpty()
+            ) {
+
                 appendLog(
                     "Bluetooth permissions granted"
                 )
+
             } else {
+
                 appendLog(
                     "Required Bluetooth permissions were not granted"
                 )
@@ -105,22 +117,62 @@ class MainActivity : AppCompatActivity() {
 
         requestBluetoothPermissions()
 
-        appendLog(
-            "Enter EVSE configuration to begin"
-        )
+        /*
+         * Development convenience:
+         *
+         * Attempt to load local DEBUG configuration.
+         *
+         * If none exists, retain the normal manual configuration
+         * workflow.
+         */
+        val localConfigurationLoaded =
+            loadLocalConfiguration()
+
+        if (
+            !localConfigurationLoaded
+        ) {
+
+            appendLog(
+                "Enter EVSE configuration to begin"
+            )
+        }
     }
 
     // ---------------------------------------------------------------------
-    // Controller configuration
+    // Local development configuration
     // ---------------------------------------------------------------------
 
     /**
-     * Creates a controller from values entered locally by the user.
+     * Loads optional DEBUG configuration originating from
+     * evse.local.properties.
      *
-     * Nothing here is persisted.
-     *
-     * Restarting the app requires re-entering the values.
+     * No configuration values are displayed or logged.
      */
+    private fun loadLocalConfiguration():
+            Boolean {
+
+        val config =
+            LocalEvseConfig.load()
+                ?: return false
+
+        createController(
+            config
+        )
+
+        configurationStatus.text =
+            "Local development configuration loaded"
+
+        appendLog(
+            "Local EVSE development configuration loaded"
+        )
+
+        return true
+    }
+
+    // ---------------------------------------------------------------------
+    // Manual controller configuration
+    // ---------------------------------------------------------------------
+
     private fun applyConfiguration() {
 
         val serialNumber =
@@ -133,7 +185,9 @@ class MainActivity : AppCompatActivity() {
                 .toString()
                 .trim()
 
-        if (serialNumber.isBlank()) {
+        if (
+            serialNumber.isBlank()
+        ) {
 
             appendLog(
                 "Configuration rejected: EVSE serial is required"
@@ -143,7 +197,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val userId =
-            userIdText.toLongOrNull()
+            userIdText
+                .toLongOrNull()
 
         if (
             userId == null ||
@@ -161,8 +216,11 @@ class MainActivity : AppCompatActivity() {
             try {
 
                 BleController.EvseConfig(
-                    serialNumber = serialNumber,
-                    userId = userId
+                    serialNumber =
+                        serialNumber,
+
+                    userId =
+                        userId
                 )
 
             } catch (
@@ -170,21 +228,57 @@ class MainActivity : AppCompatActivity() {
             ) {
 
                 appendLog(
-                    "Configuration rejected: ${exception.message}"
+                    "Configuration rejected"
                 )
 
                 return
             }
 
+        createController(
+            config
+        )
+
+        configurationStatus.text =
+            "Manual configuration loaded"
+
+        appendLog(
+            "EVSE configuration loaded"
+        )
+
         /*
-         * Dispose of an existing controller before replacing it.
+         * Remove values from visible UI after loading them.
          */
-        bleController?.disconnect()
+        serialInput.text.clear()
+        userIdInput.text.clear()
+    }
+
+    // ---------------------------------------------------------------------
+    // Controller creation
+    // ---------------------------------------------------------------------
+
+    /**
+     * Single controller creation path used by both:
+     *
+     * - local DEBUG configuration
+     * - manual configuration
+     */
+    private fun createController(
+        config: BleController.EvseConfig
+    ) {
+
+        /*
+         * Dispose of any previous BLE connection/controller.
+         */
+        bleController
+            ?.disconnect()
 
         bleController =
             BleController(
-                context = this,
-                config = config,
+                context =
+                    this,
+
+                config =
+                    config,
 
                 onLog = { message ->
 
@@ -209,34 +303,20 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             )
-
-        /*
-         * Deliberately do not include the serial number or user ID
-         * in the UI status or application logs.
-         */
-        configurationStatus.text =
-            "Configuration loaded"
-
-        appendLog(
-            "EVSE configuration loaded"
-        )
-
-        /*
-         * Clear the visible fields after the values have been copied
-         * into the in-memory controller configuration.
-         *
-         * This reduces accidental exposure in screenshots.
-         */
-        serialInput.text.clear()
-        userIdInput.text.clear()
     }
 
-    private fun controllerOrLog(): BleController? {
+    /**
+     * Returns the configured controller or writes a safe message.
+     */
+    private fun controllerOrLog():
+            BleController? {
 
         val controller =
             bleController
 
-        if (controller == null) {
+        if (
+            controller == null
+        ) {
 
             appendLog(
                 "Configure the EVSE before using BLE controls"
@@ -314,7 +394,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         // -----------------------------------------------------------------
-        // Configuration section
+        // Configuration
         // -----------------------------------------------------------------
 
         val configurationTitle =
@@ -339,9 +419,10 @@ class MainActivity : AppCompatActivity() {
             ).apply {
 
                 text =
-                    "Enter configuration for EVSE hardware you own " +
-                            "or are authorized to control. Values are kept " +
-                            "only in memory and are not logged."
+                    "Local DEBUG configuration is loaded automatically " +
+                            "when available. Otherwise enter configuration " +
+                            "for EVSE hardware you own or are authorized " +
+                            "to control."
 
                 textSize =
                     11f
@@ -373,7 +454,8 @@ class MainActivity : AppCompatActivity() {
                     true
 
                 importantForAutofill =
-                    EditText.IMPORTANT_FOR_AUTOFILL_NO
+                    EditText
+                        .IMPORTANT_FOR_AUTOFILL_NO
 
                 contentDescription =
                     "EVSE serial number"
@@ -398,7 +480,8 @@ class MainActivity : AppCompatActivity() {
                     true
 
                 importantForAutofill =
-                    EditText.IMPORTANT_FOR_AUTOFILL_NO
+                    EditText
+                        .IMPORTANT_FOR_AUTOFILL_NO
 
                 contentDescription =
                     "Authorized EVSE user ID"
@@ -541,7 +624,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         // -----------------------------------------------------------------
-        // Device selector
+        // Device selection
         // -----------------------------------------------------------------
 
         deviceSpinner =
@@ -568,20 +651,8 @@ class MainActivity : AppCompatActivity() {
             deviceSpinner
         )
 
-        /*
-         * The spinner deliberately displays generic labels such as:
-         *
-         * BLE device 1 | RSSI -55
-         *
-         * It does NOT expose:
-         *
-         * - MAC address
-         * - advertised device name
-         * - EVSE serial
-         */
-
         // -----------------------------------------------------------------
-        // Connect controls
+        // Connection
         // -----------------------------------------------------------------
 
         val connectRow =
@@ -645,7 +716,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         // -----------------------------------------------------------------
-        // Read-only diagnostics
+        // Read-only operations
         // -----------------------------------------------------------------
 
         val readRow =
@@ -802,8 +873,8 @@ class MainActivity : AppCompatActivity() {
                 text =
                     "Experimental interoperability software. " +
                             "Start and Pause change EVSE state. " +
-                            "Use only with equipment you own or are authorized " +
-                            "to control. Do not exceed equipment or circuit ratings."
+                            "Use only with equipment you own or are " +
+                            "authorized to control."
 
                 textSize =
                     11f
@@ -821,7 +892,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         // -----------------------------------------------------------------
-        // Sanitized application log
+        // Log
         // -----------------------------------------------------------------
 
         val logTitle =
@@ -846,7 +917,8 @@ class MainActivity : AppCompatActivity() {
             ).apply {
 
                 text =
-                    "Device identifiers and raw protocol frames are not logged."
+                    "Device identifiers, configuration values, " +
+                            "and raw protocol frames are not logged."
 
                 textSize =
                     10f
@@ -912,18 +984,13 @@ class MainActivity : AppCompatActivity() {
         rssi: Int
     ) {
 
-        /*
-         * Android's BluetoothDevice.address is used only internally
-         * for deduplication.
-         *
-         * It is never displayed or logged.
-         */
         val existingIndex =
-            devices.indexOfFirst { existing ->
+            devices
+                .indexOfFirst { existing ->
 
-                existing.address ==
-                        device.address
-            }
+                    existing.address ==
+                            device.address
+                }
 
         if (
             existingIndex >= 0
@@ -960,11 +1027,6 @@ class MainActivity : AppCompatActivity() {
             .notifyDataSetChanged()
     }
 
-    /**
-     * Do not use BluetoothDevice.name or BluetoothDevice.address here.
-     *
-     * Some EVSEs advertise a persistent identifier as their BLE name.
-     */
     private fun buildDeviceLabel(
         index: Int,
         rssi: Int
@@ -989,8 +1051,7 @@ class MainActivity : AppCompatActivity() {
 
         if (
             position < 0 ||
-            position >=
-            devices.size
+            position >= devices.size
         ) {
 
             appendLog(
@@ -1005,12 +1066,6 @@ class MainActivity : AppCompatActivity() {
                 position
             ]
 
-        /*
-         * Deliberately do not print:
-         *
-         * device.address
-         * device.name
-         */
         appendLog(
             "Connecting to selected BLE device"
         )
@@ -1069,13 +1124,6 @@ class MainActivity : AppCompatActivity() {
 
         } else {
 
-            /*
-             * Depending on target SDK and BLE scan implementation,
-             * older Android releases may require location permission.
-             *
-             * Handle this in AndroidManifest.xml / project configuration
-             * according to the minimum SDK supported by the project.
-             */
             appendLog(
                 "Using legacy Android Bluetooth permission model"
             )
@@ -1098,9 +1146,6 @@ class MainActivity : AppCompatActivity() {
             "\n"
         )
 
-        /*
-         * Keep newest log entry visible.
-         */
         logText.post {
 
             val parent =
